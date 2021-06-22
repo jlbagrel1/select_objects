@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Dict
 from dataclasses import dataclass
 
 @dataclass
@@ -24,3 +24,19 @@ class Rect:
     
     def get_coords(self) -> Tuple[float, float, float, float]:
         return self.begin.x, self.begin.y, self.end.x, self.end.y
+    
+    def get_obj(self, ratio) -> Dict[str, float]:
+        (x1, y1, x2, y2) = self.get_coords()
+        r_xg = min(x1, x2)
+        r_xd = max(x1, x2)
+        r_yh = min(y1, y2)
+        r_yb = max(y1, y2)
+        r_w = r_xd - r_xg
+        r_h = r_yb - r_yh
+        obj = {
+            "x": int(r_xg * ratio),
+            "y": int(r_yh * ratio),
+            "width": int(r_w * ratio),
+            "height": int(r_h * ratio),
+        }
+        return obj
