@@ -2,6 +2,7 @@ import tkinter as tk
 
 from model import *
 from tkinter.filedialog import askdirectory
+from tkinter.messagebox import askyesno
 from os.path import isfile, join
 from os import listdir
 from PIL import Image, ImageTk
@@ -62,7 +63,7 @@ class App(tk.Frame):
 
         self.label_dossier_ouvert = tk.Label(self.panneau_gauche, text="<Pas de dossier ouvert>")
         self.label_dossier_ouvert.grid(row=0, column=0)
-        self.liste_photos = tk.Listbox(self.panneau_gauche)
+        self.liste_photos = tk.Listbox(self.panneau_gauche, exportselection=0)
         self.liste_photos.bind("<<ListboxSelect>>", self.charger_photo_selectionnee)
         self.liste_photos.grid(row=1, column=0, sticky="nsew")
 
@@ -76,7 +77,7 @@ class App(tk.Frame):
 
         self.bouton_supprimer_rectangle = tk.Button(self.panneau_droite, text="Supprimer rectangle", command=self.supprimer_rectangle_selectionne)
         self.bouton_supprimer_rectangle.grid(row=0, column=0)
-        self.liste_rectangles = tk.Listbox(self.panneau_droite)
+        self.liste_rectangles = tk.Listbox(self.panneau_droite, exportselection=0)
         self.liste_rectangles.bind("<<ListboxSelect>>", self.charger_rectangle_selectionne)
         self.liste_rectangles.grid(row=1, column=0, sticky="nsew")
 
@@ -102,11 +103,16 @@ class App(tk.Frame):
         with open(chemin_json, "w") as fichier_json : 
             json.dump(self.donnees_rectangles(), fichier_json, indent=4)
         self.mettre_a_jour_liste_photos()
-        self.selectionner_photo_suivante()
         self.est_sauvegarde = True
+        self.selectionner_photo_suivante()
         self.mettre_a_jour_etat_bouton_enregistrer()
 
     def charger_photo_selectionnee(self, *args):
+        if not self.est_sauvegarde :
+            veut_changer = askyesno("Confirmation", "Voulez-vous changer d'image alors que le(s) rectangle(s) sur celle-ci ne sont pas sauvegardé(s) ?")
+            if not veut_changer :
+                return
+        #---------------------------------------------
         t = self.liste_photos.curselection()
         if not t:
             return
