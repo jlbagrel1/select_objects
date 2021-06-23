@@ -36,7 +36,6 @@ class App(tk.Frame):
         self.rectangle_en_cours = None
         self.indice_photo_actuelle = None
         self.est_sauvegarde = True
-        self.mettre_a_jour_etat_bouton_enregistrer()
         self.init_widgets()
         
     def init_widgets(self):
@@ -81,6 +80,8 @@ class App(tk.Frame):
         self.liste_rectangles.bind("<<ListboxSelect>>", self.charger_rectangle_selectionne)
         self.liste_rectangles.grid(row=1, column=0, sticky="nsew")
 
+        self.mettre_a_jour_etat_bouton_enregistrer()
+
     def ouvrir_dossier(self):
         self.directoryname = askdirectory()
         self.label_dossier_ouvert.configure(text=self.directoryname)
@@ -110,6 +111,8 @@ class App(tk.Frame):
         if not t:
             return
         self.supprimer_rectangles()
+        self.est_sauvegarde = True
+        self.mettre_a_jour_etat_bouton_enregistrer()
         self.indice_rectangle_actuel = None
         self.rectangle_en_cours = None
         self.indice_photo_actuelle = t[0]
@@ -133,9 +136,11 @@ class App(tk.Frame):
         pass
     
     def mettre_a_jour_etat_bouton_enregistrer(self):
-        # TODO
+        if self.est_sauvegarde : 
+            self.bouton_enregistrer_rectangles.config(state = tk.DISABLED)
+        else :
+            self.bouton_enregistrer_rectangles.config(state = tk.NORMAL)
         # regarder self.est_sauvegarde, et activer / désactiver le bouton enregistrer en fonction
-        pass
     
     def selectionner_photo(self, indice):
         self.liste_photos.selection_clear(0, tk.END)
@@ -144,7 +149,8 @@ class App(tk.Frame):
         self.liste_photos.activate(indice)
         self.liste_photos.selection_anchor(indice)
         self.charger_photo_selectionnee()
-    int("skipped")
+    
+    def selectionner_photo_suivante(self):
         n = len(self.photos)
         c = 0  # compteur de combien de photos j'ai examiné
         i = self.indice_photo_actuelle + 1 if self.indice_photo_actuelle is not None else 0 # indice de la photo que j'examine
@@ -177,7 +183,14 @@ class App(tk.Frame):
     
     def supprimer_rectangles(self):
         for rectangle in self.rectangles:
-            self.canvint("skipped")
+            self.canvas.delete(rectangle.id)
+        self.rectangles = []
+        self.mettre_a_jour_liste_rectangles()
+        self.liste_rectangles.selection_clear(0, tk.END)
+
+    def supprimer_rectangle_selectionne(self):
+        if self.indice_rectangle_actuel is None:
+            return
         # ici, on a l'indice du rectangle selectionné dans self.rectangles
         rectangle = self.rectangles[self.indice_rectangle_actuel]
         self.rectangles.pop(self.indice_rectangle_actuel)
