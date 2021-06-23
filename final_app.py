@@ -6,7 +6,7 @@ from os.path import isfile, join
 from os import listdir
 from PIL import Image, ImageTk
 import os
-
+import json
 MAX_CANVAS_WIDTH = 1200
 MAX_CANVAS_HEIGHT = 600
 PANEL_WIDTH = 200
@@ -33,6 +33,10 @@ class App(tk.Frame):
         self.rectangles = []
         self.liste_fichiers = []
         self.indice_rectangle_actuel = None
+        self.rectangle_en_cours = None
+        self.indice_photo_actuelle = None
+        self.est_sauvegarde = True
+        self.mettre_a_jour_etat_bouton_enregistrer()
         self.init_widgets()
         
     def init_widgets(self):
@@ -80,12 +84,12 @@ class App(tk.Frame):
     def ouvrir_dossier(self):
         self.directoryname = askdirectory()
         self.label_dossier_ouvert.configure(text=self.directoryname)
-        self.liste_fichiers = fichiers_de(self.directoryname)
         self.mettre_a_jour_liste_photos()
         self.selectionner_photo_suivante()
         self.charger_photo_selectionnee()
     
     def photos_du_dossier(self):
+        self.liste_fichiers = fichiers_de(self.directoryname)
         resultat = []
         for nom_fichier in self.liste_fichiers:
             if est_image(nom_fichier):
@@ -93,10 +97,13 @@ class App(tk.Frame):
         return resultat
 
     def enregistrer_rectangles(self):
-        # TODO: enregistrer
+        chemin_json = nom_associe(self.chemin_photo)
+        with open(chemin_json, "w") as fichier_json : 
+            json.dump(self.donnees_rectangles(), fichier_json, indent=4)
         self.mettre_a_jour_liste_photos()
         self.selectionner_photo_suivante()
-        self.charger_photo_selectionnee()
+        self.est_sauvegarde = True
+        self.mettre_a_jour_etat_bouton_enregistrer()
 
     def charger_photo_selectionnee(self, *args):
         t = self.liste_photos.curselection()
@@ -105,11 +112,11 @@ class App(tk.Frame):
         self.supprimer_rectangles()
         self.indice_rectangle_actuel = None
         self.rectangle_en_cours = None
-        indice_photo = t[0]
-        nom_photo = self.photos[indice_photo][0]
-        chemin_photo = os.path.join(self.directoryname, nom_photo)
+        self.indice_photo_actuelle = t[0]
+        nom_photo = self.photos[self.indice_photo_actuelle][0]
+        self.chemin_photo = os.path.join(self.directoryname, nom_photo)
 
-        self.image = Image.open(chemin_photo)
+        self.image = Image.open(self.chemin_photo)
         if self.image.width > MAX_CANVAS_WIDTH or self.image.height > MAX_CANVAS_HEIGHT :
             self.ratio = max (self.image.width/MAX_CANVAS_WIDTH, self.image.height/MAX_CANVAS_HEIGHT)
             cw = int(self.image.width / self.ratio)
@@ -125,13 +132,32 @@ class App(tk.Frame):
         self.canvas.update()
         pass
     
-    def selectionner_photo(self, indice):
+    def mettre_a_jour_etat_bouton_enregistrer(self):
         # TODO
-        self.charger_photo_selectionnee()
-    
-    def selectionner_photo_suivante(self):
-        # TODO: selectionner la prochaine photo de la liste qui n'a pas été traitée encore
+        # regarder self.est_sauvegarde, et activer / désactiver le bouton enregistrer en fonction
         pass
+    
+    def selectionner_photo(self, indice):
+        self.liste_photos.selection_clear(0, tk.END)
+        self.liste_photos.selection_set(indice)
+        self.liste_photos.see(indice)
+        self.liste_photos.activate(indice)
+        self.liste_photos.selection_anchor(indice)
+        self.charger_photo_selectionnee()
+    int("skipped")
+        n = len(self.photos)
+        c = 0  # compteur de combien de photos j'ai examiné
+        i = self.indice_photo_actuelle + 1 if self.indice_photo_actuelle is not None else 0 # indice de la photo que j'examine
+        while c < n:
+            if i == n:
+                i = 0
+            (nom_photo, deja_faite) = self.photos[i]
+            if not deja_faite:
+                self.selectionner_photo(i)
+                break
+            else:
+                i += 1
+            c += 1 # equiv à c = c + 1
     
     def mettre_a_jour_liste_rectangles(self):
         self.liste_rectangles.delete(0, tk.END)
@@ -151,14 +177,7 @@ class App(tk.Frame):
     
     def supprimer_rectangles(self):
         for rectangle in self.rectangles:
-            self.canvas.delete(rectangle.id)
-        self.rectangles = []
-        self.mettre_a_jour_liste_rectangles()
-        self.liste_rectangles.selection_clear(0, tk.END)
-
-    def supprimer_rectangle_selectionne(self):
-        if self.indice_rectangle_actuel is None:
-            return
+            self.canvint("skipped")
         # ici, on a l'indice du rectangle selectionné dans self.rectangles
         rectangle = self.rectangles[self.indice_rectangle_actuel]
         self.rectangles.pop(self.indice_rectangle_actuel)
@@ -168,6 +187,10 @@ class App(tk.Frame):
         self.mettre_a_jour_liste_rectangles()
         if n > 0:
             self.selectionner_rectangle(n - 1)
+            self.est_sauvegarde = False
+        else:
+            self.est_sauvegarde = True
+        self.mettre_a_jour_etat_bouton_enregistrer()
 
     def charger_rectangle_selectionne(self, *args):
         t = self.liste_rectangles.curselection()
@@ -200,6 +223,8 @@ class App(tk.Frame):
         self.rectangles.append(rectangle)
         self.mettre_a_jour_liste_rectangles()
         indice = len(self.rectangles) - 1
+        self.est_sauvegarde = False
+        self.mettre_a_jour_etat_bouton_enregistrer()
         self.selectionner_rectangle(indice)
     
     def donnees_rectangles(self):
