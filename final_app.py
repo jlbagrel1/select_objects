@@ -45,6 +45,9 @@ class App(tk.Frame):
         self.zone_centre = tk.Frame(
             self.parent, width=MAX_CANVAS_WIDTH, height=MAX_CANVAS_HEIGHT)
         self.zone_centre.grid(row=1, column=1)
+        self.zone_centre.grid_propagate(False)
+        self.zone_centre.grid_rowconfigure(0, weight=1)
+        self.zone_centre.grid_columnconfigure(0, weight=1)
 
         self.panneau_droite = tk.Frame(self.parent, width=PANEL_WIDTH)
         self.panneau_droite.grid(row=1, column=2, sticky="nsew")
@@ -71,6 +74,7 @@ class App(tk.Frame):
         self.bouton_supprimer_rectangle = tk.Button(self.panneau_droite, text="Supprimer rectangle", command=self.supprimer_rectangle_selectionne)
         self.bouton_supprimer_rectangle.grid(row=0, column=0)
         self.liste_rectangles = tk.Listbox(self.panneau_droite)
+        self.liste_rectangles.bind("<<ListboxSelect>>", self.charger_rectangle_selectionne)
         self.liste_rectangles.grid(row=1, column=0, sticky="nsew")
 
     def ouvrir_dossier(self):
@@ -95,7 +99,13 @@ class App(tk.Frame):
         self.charger_photo_selectionnee()
 
     def charger_photo_selectionnee(self, *args):
-        indice_photo = self.liste_photos.curselection()[0]
+        t = self.liste_photos.curselection()
+        if not t:
+            return
+        self.supprimer_rectangles()
+        self.indice_rectangle_actuel = None
+        self.rectangle_en_cours = None
+        indice_photo = t[0]
         nom_photo = self.photos[indice_photo][0]
         chemin_photo = os.path.join(self.directoryname, nom_photo)
 
@@ -113,16 +123,21 @@ class App(tk.Frame):
         self.canvas.itemconfigure(self.canvas_image_ref, image=self.image_tk)
         self.canvas.configure(width=cw, height=ch)
         self.canvas.update()
-        # TODO: ne pas oublier de vider les rectangles
         pass
+    
+    def selectionner_photo(self, indice):
+        # TODO
+        self.charger_photo_selectionnee()
     
     def selectionner_photo_suivante(self):
         # TODO: selectionner la prochaine photo de la liste qui n'a pas été traitée encore
         pass
     
     def mettre_a_jour_liste_rectangles(self):
-        # TODO
-        pass
+        self.liste_rectangles.delete(0, tk.END)
+        for rectangle in self.rectangles :
+            texte = "Rect {} ({}, {}, {}, {})".format(rectangle.id, *rectangle.get_coords())
+            self.liste_rectangles.insert(tk.END, texte)
 
     def mettre_a_jour_liste_photos(self):
         self.liste_photos.delete(0, tk.END)
@@ -134,27 +149,58 @@ class App(tk.Frame):
     def est_deja_traitee(self, nom_photo):
         return nom_associe(nom_photo) in self.liste_fichiers
     
-    def supprimer_rectangle_selectionne(self):
-        # TODO: supprimer
-        self.indice_rectangle_actuel = None
-        self.selectionner_rectangle(len(self.rectangles) - 1)
+    def supprimer_rectangles(self):
+        for rectangle in self.rectangles:
+            self.canvas.delete(rectangle.id)
+        self.rectangles = []
+        self.mettre_a_jour_liste_rectangles()
+        self.liste_rectangles.selection_clear(0, tk.END)
 
-    def selectionner_rectangle(self, indice):
-        if self.indice_rectangle_actuel is not None:
-            self.peindre_rectangle(self.indice_rectangle_actuel, "red")
-        self.indice_rectangle_actuel = indice
+    def supprimer_rectangle_selectionne(self):
+        if self.indice_rectangle_actuel is None:
+            return
+        # ici, on a l'indice du rectangle selectionné dans self.rectangles
+        rectangle = self.rectangles[self.indice_rectangle_actuel]
+        self.rectangles.pop(self.indice_rectangle_actuel)
+        self.canvas.delete(rectangle.id)
+        self.indice_rectangle_actuel = None
+        n = len(self.rectangles)
+        self.mettre_a_jour_liste_rectangles()
+        if n > 0:
+            self.selectionner_rectangle(n - 1)
+
+    def charger_rectangle_selectionne(self, *args):
+        t = self.liste_rectangles.curselection()
+        if not t:
+            print("skipped")
+            return
+        indice_rectangle = t[0]
+        self.peindre_rectangle(self.indice_rectangle_actuel, "red")
+        self.indice_rectangle_actuel = indice_rectangle
         self.peindre_rectangle(self.indice_rectangle_actuel, "green")
 
     def peindre_rectangle(self, indice, couleur):
-        # TODO: peindre
-        pass
+        if indice is None:
+            return
+        rectangle = self.rectangles[indice]
+        self.canvas.itemconfigure(rectangle.id, outline = couleur)
+
+
+    def selectionner_rectangle(self, indice):
+        self.liste_rectangles.selection_clear(0, tk.END)
+        self.liste_rectangles.selection_set(indice)
+        self.liste_rectangles.see(indice)
+        self.liste_rectangles.activate(indice)
+        self.liste_rectangles.selection_anchor(indice)
+        self.charger_rectangle_selectionne()
 
     def ajouter_rectangle(self):
         rectangle = self.rectangle_en_cours
         self.rectangle_en_cours = None
         self.rectangles.append(rectangle)
-        self.indice_rectangle_actuel = len(self.rectangles) - 1
         self.mettre_a_jour_liste_rectangles()
+        indice = len(self.rectangles) - 1
+        self.selectionner_rectangle(indice)
     
     def donnees_rectangles(self):
         resultat = []
