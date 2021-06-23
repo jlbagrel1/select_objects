@@ -25,6 +25,18 @@ class Rect:
     def get_coords(self) -> Tuple[float, float, float, float]:
         return self.begin.x, self.begin.y, self.end.x, self.end.y
     
+    @classmethod
+    def from_obj(cls, obj, ratio):
+        x1 = int(obj["x"] / ratio)
+        x2 = int((obj["width"] + obj["x"]) / ratio)
+        y1 = int(obj["y"] / ratio)
+        y2 = int((obj["height"] + obj["y"]) / ratio)
+        return cls(0, Point(x1, y1), Point(x2, y2))
+            
+    @classmethod
+    def from_objs(cls, objs, ratio):
+        return [cls.from_obj(obj, ratio) for obj in objs]
+            
     def get_obj(self, ratio) -> Dict[str, float]:
         (x1, y1, x2, y2) = self.get_coords()
         r_xg = min(x1, x2)

@@ -81,9 +81,13 @@ class App(tk.Frame):
         self.liste_rectangles.bind("<<ListboxSelect>>", self.charger_rectangle_selectionne)
         self.liste_rectangles.grid(row=1, column=0, sticky="nsew")
 
+        self.parent.bind("<Control-s>", self.enregistrer_rectangles)
+        self.parent.bind("<Delete>", self.supprimer_rectangle_selectionne)
+        self.parent.bind("<Control-o>", self.ouvrir_dossier)
+
         self.mettre_a_jour_etat_bouton_enregistrer()
 
-    def ouvrir_dossier(self):
+    def ouvrir_dossier(self, *args):
         self.directoryname = askdirectory()
         self.label_dossier_ouvert.configure(text=self.directoryname)
         self.mettre_a_jour_liste_photos()
@@ -98,7 +102,9 @@ class App(tk.Frame):
                 resultat.append((nom_fichier, self.est_deja_traitee(nom_fichier)))
         return resultat
 
-    def enregistrer_rectangles(self):
+    def enregistrer_rectangles(self, *args):
+        if self.est_sauvegarde:
+            return
         chemin_json = nom_associe(self.chemin_photo)
         with open(chemin_json, "w") as fichier_json : 
             json.dump(self.donnees_rectangles(), fichier_json, indent=4)
@@ -116,14 +122,14 @@ class App(tk.Frame):
         t = self.liste_photos.curselection()
         if not t:
             return
+        self.indice_photo_actuelle = t[0]
+        nom_photo = self.photos[self.indice_photo_actuelle][0]
+        self.chemin_photo = os.path.join(self.directoryname, nom_photo)
         self.supprimer_rectangles()
         self.est_sauvegarde = True
         self.mettre_a_jour_etat_bouton_enregistrer()
         self.indice_rectangle_actuel = None
         self.rectangle_en_cours = None
-        self.indice_photo_actuelle = t[0]
-        nom_photo = self.photos[self.indice_photo_actuelle][0]
-        self.chemin_photo = os.path.join(self.directoryname, nom_photo)
 
         self.image = Image.open(self.chemin_photo)
         if self.image.width > MAX_CANVAS_WIDTH or self.image.height > MAX_CANVAS_HEIGHT :
@@ -139,7 +145,21 @@ class App(tk.Frame):
         self.canvas.itemconfigure(self.canvas_image_ref, image=self.image_tk)
         self.canvas.configure(width=cw, height=ch)
         self.canvas.update()
-        pass
+
+        self.charger_rectangles(nom_photo, self.ratio)
+    
+    def charger_rectangles(self, nom_photo, ratio):
+        nom_json = nom_associe(nom_photo)
+        if nom_json not in self.liste_fichiers:
+            return
+        chemin_json = os.path.join(self.directoryname, nom_json)
+        with open(chemin_json, "r") as fichier_json : 
+            objs = json.load(fichier_json)
+            rectangles = Rect.from_objs(objs, ratio)
+            for rectangle in rectangles:
+                rectangle.id = self.canvas.create_rectangle(
+            *rectangle.get_coords(), outline="green", width=2)
+                self.ajouter_rectangle(rectangle, True)
     
     def mettre_a_jour_etat_bouton_enregistrer(self):
         if self.est_sauvegarde : 
@@ -194,7 +214,7 @@ class App(tk.Frame):
         self.mettre_a_jour_liste_rectangles()
         self.liste_rectangles.selection_clear(0, tk.END)
 
-    def supprimer_rectangle_selectionne(self):
+    def supprimer_rectangle_selectionne(self, *args):
         if self.indice_rectangle_actuel is None:
             return
         # ici, on a l'indice du rectangle selectionné dans self.rectangles
@@ -227,7 +247,6 @@ class App(tk.Frame):
         rectangle = self.rectangles[indice]
         self.canvas.itemconfigure(rectangle.id, outline = couleur)
 
-
     def selectionner_rectangle(self, indice):
         self.liste_rectangles.selection_clear(0, tk.END)
         self.liste_rectangles.selection_set(indice)
@@ -236,14 +255,13 @@ class App(tk.Frame):
         self.liste_rectangles.selection_anchor(indice)
         self.charger_rectangle_selectionne()
 
-    def ajouter_rectangle(self):
-        rectangle = self.rectangle_en_cours
-        self.rectangle_en_cours = None
+    def ajouter_rectangle(self, rectangle, charge_depuis_fichier):
         self.rectangles.append(rectangle)
         self.mettre_a_jour_liste_rectangles()
         indice = len(self.rectangles) - 1
-        self.est_sauvegarde = False
-        self.mettre_a_jour_etat_bouton_enregistrer()
+        if not charge_depuis_fichier:
+            self.est_sauvegarde = False
+            self.mettre_a_jour_etat_bouton_enregistrer()
         self.selectionner_rectangle(indice)
     
     def donnees_rectangles(self):
@@ -273,7 +291,8 @@ class App(tk.Frame):
         self.rectangle_en_cours.update_end_with(x, y)
         self.canvas.coords(self.rectangle_en_cours.id, *self.rectangle_en_cours.get_coords())
         print("Rectangle {} fini à ({}, {})".format(self.rectangle_en_cours.id, x, y))
-        self.ajouter_rectangle()
+        self.ajouter_rectangle(self.rectangle_en_cours, False)
+        self.rectangle_en_cours = None
 
 def main():
     root = tk.Tk()
