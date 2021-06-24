@@ -8,9 +8,9 @@ from os import listdir
 from PIL import Image, ImageTk
 import os
 import json
-MAX_CANVAS_WIDTH = 1200
-MAX_CANVAS_HEIGHT = 600
-PANEL_WIDTH = 200
+MAX_CANVAS_WIDTH = 1300
+MAX_CANVAS_HEIGHT = 800
+PANEL_WIDTH = 250
 TICK = "+"#"\u2713"
 CROSS = "-"#"\u274c"
 
@@ -63,7 +63,7 @@ class App(tk.Frame):
 
         self.label_dossier_ouvert = tk.Label(self.panneau_gauche, text="<Pas de dossier ouvert>")
         self.label_dossier_ouvert.grid(row=0, column=0)
-        self.liste_photos = tk.Listbox(self.panneau_gauche, exportselection=0)
+        self.liste_photos = tk.Listbox(self.panneau_gauche, exportselection=0, height=40)
         self.liste_photos.bind("<<ListboxSelect>>", self.charger_photo_selectionnee)
         self.liste_photos.grid(row=1, column=0, sticky="nsew")
 
@@ -77,7 +77,7 @@ class App(tk.Frame):
 
         self.bouton_supprimer_rectangle = tk.Button(self.panneau_droite, text="Supprimer rectangle", command=self.supprimer_rectangle_selectionne)
         self.bouton_supprimer_rectangle.grid(row=0, column=0)
-        self.liste_rectangles = tk.Listbox(self.panneau_droite, exportselection=0)
+        self.liste_rectangles = tk.Listbox(self.panneau_droite, exportselection=0, height=40)
         self.liste_rectangles.bind("<<ListboxSelect>>", self.charger_rectangle_selectionne)
         self.liste_rectangles.grid(row=1, column=0, sticky="nsew")
 
@@ -201,7 +201,7 @@ class App(tk.Frame):
         self.liste_photos.delete(0, tk.END)
         self.photos = self.photos_du_dossier()
         for nom_photo, deja_fait in self.photos:
-            texte = nom_photo + " " + (TICK if deja_fait else CROSS)
+            texte =  (TICK if deja_fait else CROSS) + " " + nom_photo
             self.liste_photos.insert(tk.END, texte)
 
     def est_deja_traitee(self, nom_photo):
